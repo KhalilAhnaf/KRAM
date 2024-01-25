@@ -1,176 +1,94 @@
-import pygame
-import sys
+from pygame.locals import *
+import pygame, sys, math
 import random
+from random import randint
 import time
-import openpyxl
-#Open AI API Key: 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
-# Pygame initialization
-pygame.init()
+import json
+import datetime
+from datetime import timedelta
+
 
 # Constants
 WIDTH, HEIGHT = 1000, 800  # Adjusted window size
 FPS = 60
+data = {}
+data['fittslaw'] = [] 
+pygame.init()
+scr = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Fitts' Law Experiment")
+pygame.mouse.set_cursor(*pygame.cursors.broken_x)
+succ_score = 0
+unsucc_score = 0
+xpos = 200
+ypos = 200
+# Change radius to change the width of the ball
+# radius = 10
 
-# Colors
+oldx = 0
+oldy = 0
+#COLORS
 BLACK = (0, 0, 0)
 NEON_GREEN = (57, 255, 20)
 NEON_BLUE = (20, 57, 255)
 NEON_PURPLE = (128, 0, 128)
 
 # Task parameters
-sizes = [10, 20, 40, 60]
-distances = [100, 200, 300, 400]
+target_sizes = [10, 20, 40, 60]
+target_distances = [(100, 200), (200, 400), (300, 600), (400, 800)]  # Adjusted positions based on your 'left' and 'right'
 positions = ['left', 'right']
 
-# Initialize Pygame window
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Fitts' Law Game")
-clock = pygame.time.Clock()
+# Set initial position
+pos = 0
+pygame.mouse.set_pos(WIDTH/2, HEIGHT/2)
 
-# Fonts
-consent_font = pygame.font.Font(None, 36)
-countdown_font = pygame.font.Font(None, 48)
-progress_font = pygame.font.Font(None, 24)
+def calcDist(x1, y1, x2, y2):
+    dist = math.hypot(x2 - x1, y2 - y1)
+    return dist
 
-# Sounds
-hit_sound = pygame.mixer.Sound("hit_sound.mp3")
-miss_sound = pygame.mixer.Sound("miss_sound.mp3")
-game_complete_sound = pygame.mixer.Sound("game_complete_sound.mp3")
+def printstmt(succ, unsucc):
+    print('Successful clicks:' + str(succ) + ' vs Unsuccessful clicks:' + str(unsucc))
 
-# Informed Consent Form
-consent_text = "I agree to participate in the Fitts' Law game. Press Space to continue."
-consent_rendered = consent_font.render(consent_text, True, NEON_GREEN)
+while True:
+    pygame.display.update(); scr.fill(BLACK)
+    pygame.draw.circle(scr, NEON_PURPLE, (xpos, ypos), random.choice(target_sizes))
+    start_time = datetime.datetime.now()
+    x = pygame.mouse.get_pos()[0]
+    y = pygame.mouse.get_pos()[1]
 
-# Countdown
-countdown = 3
-
-# Game state
-consent_given = False
-game_active = False
-pause = False
-
-# Progress bar
-progress = 0
-progress_increment = 8  # 32 tasks / 4 tasks per increment
-
-# Data collection
-data = []
-
-# Main game loop
-running = True
-while running:
-    task_completed = False  # Variable to track if the current task is completed
-
+    sqx = (x - xpos)**2
+    sqy = (y - ypos)**2
     for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        elif event.type == pygame.KEYDOWN:
-            if not consent_given and event.key == pygame.K_SPACE:
-                consent_given = True
-                game_active = True
-            elif game_active and event.key == pygame.K_p:
-                pause = not pause
-                pygame.time.delay(500)  # Avoids multiple key presses during a single key press
-        elif game_active and event.type == pygame.MOUSEBUTTONUP:
-            # Check if the click is inside the circle
-            mouse_x, mouse_y = pygame.mouse.get_pos()
-            if 0 <= progress < 32 and not task_completed:  # Ensure progress is within valid range and task is not already completed
-                circle_x = WIDTH // 2 + (distances[progress % 4] if positions[(progress // 8) % 2] == 'right' else -distances[progress % 4])
-                circle_y = HEIGHT // 2
-                size = sizes[progress // 8]
+        if event.type == QUIT:
+            with open('data.json', 'w') as outfile:
+                json.dump(data, outfile)
+            pygame.quit()
+            sys.exit()
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            dist1 = math.sqrt(sqx + sqy)
+            if dist1 < radius:
+                difftime = datetime.datetime.now() - start_time
+                print(str(difftime.microseconds))
+                succ_score += 1
+                dist = calcDist(oldx, oldy, xpos, ypos)
 
-                distance_to_center = ((mouse_x - circle_x) ** 2 + (mouse_y - circle_y) ** 2) ** 0.5
-
-                if distance_to_center <= size / 2:
-                    hit_sound.play()
-                    data.append([progress % progress_increment, size, distances[progress % 4], positions[(progress // 8) % 2], False, 0])
-                    task_completed = True  # Set the flag to indicate task completion
-                else:
-                    miss_sound.play()
-                    data.append([progress % progress_increment, size, distances[progress % 4], positions[(progress // 8) % 2], True, distance_to_center])
-
-                    # Skip the next task in case of a miss
-                    progress += 1
-
-                # Check if all tasks are completed
-                if progress == 32:
-                    game_complete_sound.play()
-                    game_active = False
-
-    screen.fill(BLACK)
-
-    if not consent_given:
-        # Display Informed Consent Form
-        screen.blit(consent_rendered, (50, HEIGHT // 2 - 50))
-    else:
-        if game_active:
-            if not pause:
-                if countdown > 0:
-                    # Display countdown
-                    countdown_rendered = countdown_font.render(str(countdown), True, NEON_BLUE)
-                    screen.blit(countdown_rendered, (WIDTH // 2 - 20, HEIGHT // 2 - 20))
-                    pygame.display.flip()
-                    pygame.time.delay(1000)
-                    countdown -= 1
-                else:
-                    # Display task
-                    if task_completed:  # Only proceed to the next task if the current task is completed
-                        progress += 1
-                        task_completed = False  # Reset the task completion flag
-
-                    if progress % progress_increment == 0:
-                        size = random.choice(sizes)
-                        distance = random.choice(distances)
-                        position = random.choice(positions)
-
-                        circle_x = WIDTH // 2 + (distance if position == 'right' else -distance)
-                        circle_y = HEIGHT // 2
-
-                        pygame.draw.circle(screen, NEON_PURPLE, (circle_x, circle_y), size)
-
-                        # Display progress bar
-                        pygame.draw.rect(screen, NEON_GREEN, (0, 0, WIDTH * progress / 32, 10))
-
-                        tasks_completed = progress % progress_increment
-
-                        # Update progress text
-                        progress_text = f"Task {tasks_completed}/4"
-                        progress_rendered = progress_font.render(progress_text, True, NEON_GREEN)
-                        screen.blit(progress_rendered, (WIDTH // 2 - 40, 10))
-
-                        pygame.display.flip()
-
-                        # Wait for a short time before clearing the screen
-                        pygame.time.delay(500)
-
-                # Clear the screen
-                screen.fill(BLACK)
-
+                # appending to data
+                data['fittslaw'].append({
+                    'time': difftime.microseconds,
+                    'distance': dist,
+                    'width': 2 * radius
+                })
+                print(data)
+                print("distance by click:" + str(dist1))
+                pygame.mouse.set_pos(350, 350)
+                oldx = xpos
+                oldy = ypos 
+                xpos, ypos = target_distances[pos]  # Updated to use the adjusted positions
+                print("target size:" + str(radius))
+                print("target distances:" + str(target_distances[pos]))
+                printstmt(succ_score, unsucc_score)
+                pos = (pos + 1) % 4
+                if pos == 4:
+                    sys.exit()
             else:
-                # Display pause message
-                pause_text = "Paused. Press 'P' to resume."
-                pause_rendered = consent_font.render(pause_text, True, NEON_BLUE)
-                screen.blit(pause_rendered, (WIDTH // 2 - 150, HEIGHT // 2 - 50))
-
-        else:
-            # Display completion message
-            completion_text = "Thank you for completing the Fitts' Law game!"
-            completion_rendered = consent_font.render(completion_text, True, NEON_GREEN)
-            screen.blit(completion_rendered, (50, HEIGHT // 2 - 50))
-
-    pygame.display.flip()
-    clock.tick(FPS)
-
-# Quit the game
-pygame.quit()
-
-# Save data to Excel file
-if data:
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.append(['Task', 'Size', 'Distance', 'Position', 'Missed', 'Missed Distance'])
-
-    for task_data in data:
-        ws.append(task_data)
-
-    wb.save('fitts_law_results.xlsx')
+                unsucc_score += 1
+                printstmt(succ_score, unsucc_score)
