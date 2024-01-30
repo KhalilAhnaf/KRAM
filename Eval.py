@@ -4,6 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import polyfit, polyval
 
+#TODO Fix this whole issue of not working, I got it working once and then it broke :(
+
 def extract_id(data):
     #JSON file is required to run this code
     timelist = []

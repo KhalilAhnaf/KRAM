@@ -60,6 +60,8 @@ def nextPos():
 
 clock = pygame.time.Clock()
 
+#TODO Add the informed consent form - Anyone do this please ;)
+
 while True:
     scr.fill(BLACK)  # Clear the screen once per frame
     pygame.draw.circle(scr, NEON_PURPLE, position, radius)
