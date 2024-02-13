@@ -119,8 +119,9 @@ class FittsLawExperiment:
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    with open('data.json', 'w') as outfile:
+                    with open('data.json', 'a') as outfile:  # Open in append mode ('a') instead of write mode ('w')
                         json.dump(self.data, outfile)
+                        outfile.write('\n')  # Add a newline character to separate each appended entry
                     pygame.quit()
                     sys.exit()
 
