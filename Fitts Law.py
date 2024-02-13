@@ -6,7 +6,7 @@ import json
 import datetime
 
 # Constants needed for the game to run 
-WIDTH, HEIGHT = 800, 800
+WIDTH, HEIGHT = 1000, 800
 FPS = 60
 NEON_PURPLE = (128, 0, 128)
 GOLD = (255, 215, 0)
@@ -99,6 +99,14 @@ class FittsLawExperiment:
         self.current_target = Target(x, y, radius)
         self.targets.add(self.current_target)
 
+
+    def terminate_game(self):
+        with open('data.json', 'a') as outfile:  # Open in append mode ('a') instead of write mode ('w')
+            json.dump(self.data, outfile)
+            outfile.write('\n')  # Add a newline character to separate each appended entry
+        pygame.quit()
+        sys.exit()
+
     def run_experiment(self):
         pygame.init()
         screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -116,14 +124,13 @@ class FittsLawExperiment:
             self.targets.update()
             self.targets.draw(screen)
             pygame.display.flip()
+            
+            if self.succ_score >= 320:
+                self.terminate_game()
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    with open('data.json', 'a') as outfile:  # Open in append mode ('a') instead of write mode ('w')
-                        json.dump(self.data, outfile)
-                        outfile.write('\n')  # Add a newline character to separate each appended entry
-                    pygame.quit()
-                    sys.exit()
+                    self.terminate_game()
 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if self.current_target.rect.collidepoint(event.pos):
