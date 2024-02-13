@@ -6,7 +6,7 @@ import json
 import datetime
 
 # Constants needed for the game to run 
-WIDTH, HEIGHT = 1000, 800
+WIDTH, HEIGHT = 800, 800
 FPS = 60
 NEON_PURPLE = (128, 0, 128)
 GOLD = (255, 215, 0)
@@ -134,16 +134,18 @@ class FittsLawExperiment:
 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if self.current_target.rect.collidepoint(event.pos):
-                        if not start_time:
-                            start_time = datetime.datetime.now()
+                        if start_time is None:
+                            start_time = pygame.time.get_ticks()
 
-                        difftime = datetime.datetime.now() - start_time
+                        end_time = pygame.time.get_ticks()
+
+                        difftime = (end_time - start_time) / 1000
                         self.succ_score += 1
 
                         dist = math.hypot(event.pos[0] - WIDTH/2, event.pos[1] - HEIGHT/2)
                         self.data['fittslaw'].append({
-                            'time': difftime.microseconds,
-                            'distance': dist,
+                            'time': round(difftime, 2),
+                            'distance': round(dist, 2),
                             'width': self.current_target.radius * 2
                         })
 
