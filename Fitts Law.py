@@ -1,115 +1,152 @@
 from pygame.locals import *
 import pygame, sys, math
 import random
-from random import randint
 import time
 import json
 import datetime
-from datetime import timedelta
 
-
-# Constants
-WIDTH, HEIGHT = 800, 800  # Adjusted window size
+# Constants needed for the game to run 
+WIDTH, HEIGHT = 800, 800
 FPS = 60
-data = {}
-data['fittslaw'] = [] 
-pygame.init()
-scr = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Fitts' Law Experiment")
-pygame.mouse.set_cursor(*pygame.cursors.broken_x)
-succ_score = 0
-unsucc_score = 0
-xpos = WIDTH/2
-ypos = HEIGHT/2
-
-oldx = 0
-oldy = 0
-#COLORS
-BLACK = (0, 0, 0)
-NEON_GREEN = (57, 255, 20)
-NEON_BLUE = (20, 57, 255)
 NEON_PURPLE = (128, 0, 128)
+GOLD = (255, 215, 0)
+BLACK = (0, 0, 0)
 
-# Task parameters
-circle_clicked = False
-target_sizes = [10, 20, 40, 60]
-target_distances = [(0, HEIGHT/2), (100, HEIGHT/2), (200, HEIGHT/2), (300, HEIGHT/2),(500, HEIGHT/2), (600, HEIGHT/2), (700, HEIGHT/2), (800, HEIGHT/2)]
-positions = ['left', 'right'] #Un-used
+class Target(pygame.sprite.Sprite):
+    def __init__(self, x, y, radius):
+        super().__init__()
+        self.image = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(self.image, NEON_PURPLE, (radius, radius), radius)
+        self.rect = self.image.get_rect(center=(x, y))
+        self.radius = radius
 
-# Set initial position
-pos = 0
-pygame.mouse.set_pos(WIDTH/2, HEIGHT/2)
+    def update(self):
+        pass
 
-def calcDist(x1, y1, x2, y2):
-    dist = math.hypot(x2 - x1, y2 - y1)
-    return dist
+class FittsLawExperiment:
+    def __init__(self):
+        self.data = {'fittslaw': []}
+        self.succ_score = 0
+        self.unsucc_score = 0
+        self.targets = pygame.sprite.Group()
+        self.current_target = None
+        self.is_running = False
+        self.next_target()
+        self.show_welcome_screen()
 
-def printstmt(succ, unsucc):
-    print('Successful clicks:' + str(succ) + ' vs Unsuccessful clicks:' + str(unsucc))
+    def show_welcome_screen(self):
+        pygame.init()
+        screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        font = pygame.font.Font(None, 36)
+        text = font.render("Welcome to the Fitts' Law Experiment", True, NEON_PURPLE)
+        text_rect = text.get_rect(center=(WIDTH/2, HEIGHT/2))
+        button = pygame.Rect(WIDTH/2 - 50, HEIGHT/2 + 50, 300, 50)
+        button_text = font.render("Let's Begin the fun game", True, GOLD)
+        button_text_rect = button_text.get_rect(center=button.center)
 
-radius = 50
-position = WIDTH/2, HEIGHT/2
+        clock = pygame.time.Clock()
+        while True:
+            screen.fill(BLACK)
+            screen.blit(text, text_rect)
+            pygame.draw.rect(screen, NEON_PURPLE, button)
+            screen.blit(button_text, button_text_rect)
+            pygame.display.flip()
 
-def nextRad():
-    radius = random.choice(target_sizes)
-    return radius
-
-def nextPos():
-    position = random.choice(target_distances)
-    return position
-
-clock = pygame.time.Clock()
-
-#TODO Add the informed consent form - Anyone do this please ;)
-
-while True:
-    scr.fill(BLACK)  # Clear the screen once per frame
-    pygame.draw.circle(scr, NEON_PURPLE, position, radius)
-    start_time = datetime.datetime.now()
-
-    for event in pygame.event.get():
-        if event.type == QUIT:
-            with open('data.json', 'w') as outfile:
-                json.dump(data, outfile)
-            pygame.quit()
-            sys.exit()
-
-        if event.type == pygame.MOUSEBUTTONDOWN and not circle_clicked:
-            x, y = pygame.mouse.get_pos()
-
-            dist1 = math.sqrt((x - position[0])**2 + (y - position[1])**2)
-            if dist1 < radius:
-                difftime = datetime.datetime.now() - start_time
-                print(str(difftime.microseconds))
-                succ_score += 1
-                circle_clicked = True
-                dist = calcDist(oldx, oldy, xpos, ypos)
-
-                # appending to data
-                data['fittslaw'].append({
-                    'time': difftime.microseconds,
-                    'distance': dist,
-                    'width': 2 * radius
-                })
-                print(data)
-                print("distance by click:" + str(dist1))
-                oldx = xpos
-                oldy = ypos
-                xpos, ypos = nextPos()
-                position = xpos, ypos
-                radius = nextRad()
-                print("target size:" + str(radius))
-                print("target distances:" + str(target_distances[pos]))
-                printstmt(succ_score, unsucc_score)
-                pos = (pos + 1) % 4
-                if pos == 4:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
                     sys.exit()
-            else:
-                unsucc_score += 1
-                printstmt(succ_score, unsucc_score)
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if button.collidepoint(event.pos):
+                        self.is_running = True
+                        return
 
-        elif event.type == pygame.MOUSEBUTTONUP:
-            circle_clicked = False
+            clock.tick(FPS)
 
-    pygame.display.flip()  # Update the entire display
-    clock.tick(FPS)  # Cap the frame rate to the specified FPS
+    def show_image_screen(self):
+        screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        image = pygame.image.load("informedConsent.png") 
+        image_rect = image.get_rect(center=(WIDTH/2, HEIGHT/2))
+        button = pygame.Rect(WIDTH/2 - 50, HEIGHT - 100, 400, 50)
+        font = pygame.font.Font(None, 36)
+        button_text = font.render("i agree to sell you my data", True, BLACK)
+        button_text_rect = button_text.get_rect(center=button.center)
+
+        clock = pygame.time.Clock()
+        while True:
+            screen.fill(BLACK)
+            screen.blit(image, image_rect)
+            pygame.draw.rect(screen, NEON_PURPLE, button)
+            screen.blit(button_text, button_text_rect)
+            pygame.display.flip()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if button.collidepoint(event.pos):
+                        return
+
+            clock.tick(FPS)
+
+    def next_target(self):
+        if self.current_target:
+            self.current_target.kill()
+
+        radius = random.choice([10, 20, 40, 60])
+        x, y = random.choice([(0, HEIGHT/2), (100, HEIGHT/2), (200, HEIGHT/2), (300, HEIGHT/2), (500, HEIGHT/2), (600, HEIGHT/2), (700, HEIGHT/2), (800, HEIGHT/2)])
+        self.current_target = Target(x, y, radius)
+        self.targets.add(self.current_target)
+
+    def run_experiment(self):
+        pygame.init()
+        screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        pygame.display.set_caption("Fitts' Law Experiment")
+        clock = pygame.time.Clock()
+
+        self.show_welcome_screen()
+
+        if self.is_running:
+            self.show_image_screen()
+
+        start_time = None
+        while self.is_running:
+            screen.fill(BLACK)
+            self.targets.update()
+            self.targets.draw(screen)
+            pygame.display.flip()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    with open('data.json', 'w') as outfile:
+                        json.dump(self.data, outfile)
+                    pygame.quit()
+                    sys.exit()
+
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    if self.current_target.rect.collidepoint(event.pos):
+                        if not start_time:
+                            start_time = datetime.datetime.now()
+
+                        difftime = datetime.datetime.now() - start_time
+                        self.succ_score += 1
+
+                        dist = math.hypot(event.pos[0] - WIDTH/2, event.pos[1] - HEIGHT/2)
+                        self.data['fittslaw'].append({
+                            'time': difftime.microseconds,
+                            'distance': dist,
+                            'width': self.current_target.radius * 2
+                        })
+
+                        self.next_target()
+                        print('Successful clicks:', self.succ_score, 'vs Unsuccessful clicks:', self.unsucc_score)
+
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    start_time = None
+
+            clock.tick(FPS)
+
+if __name__ == '__main__':
+    experiment = FittsLawExperiment()
+    experiment.run_experiment()
