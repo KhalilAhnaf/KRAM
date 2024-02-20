@@ -1,9 +1,7 @@
+import csv
 from pygame.locals import *
 import pygame, sys, math
 import random
-import time
-import json
-import datetime
 
 # Constants needed for the game to run 
 WIDTH, HEIGHT = 800, 800
@@ -99,11 +97,22 @@ class FittsLawExperiment:
         self.current_target = Target(x, y, radius)
         self.targets.add(self.current_target)
 
-
     def terminate_game(self):
-        with open('data.json', 'a') as outfile:  # Open in append mode ('a') instead of write mode ('w')
-            json.dump(self.data, outfile)
-            outfile.write('\n')  # Add a newline character to separate each appended entry
+        with open('data.csv', 'a', newline='') as csvfile:
+            fieldnames = ['time_difference', 'distance', 'width']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+            if csvfile.tell() == 0:
+                writer.writeheader()
+
+            # Write data to CSV file
+            for entry in self.data['fittslaw']:
+                writer.writerow({
+                'time_difference': entry.get('time_difference', 0),
+                'distance': entry.get('distance', 0),
+                'width': entry.get('width', 0)
+            })
+
         pygame.quit()
         sys.exit()
 
@@ -117,15 +126,15 @@ class FittsLawExperiment:
 
         if self.is_running:
             self.show_image_screen()
-
-        start_time = None
+            
+        start_time = 0
         while self.is_running:
             screen.fill(BLACK)
             self.targets.update()
             self.targets.draw(screen)
             pygame.display.flip()
-            
-            if self.succ_score >= 320:
+
+            if self.succ_score >= 5:
                 self.terminate_game()
 
             for event in pygame.event.get():
@@ -134,26 +143,28 @@ class FittsLawExperiment:
 
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if self.current_target.rect.collidepoint(event.pos):
-                        if start_time is None:
+                        if start_time == 0:
                             start_time = pygame.time.get_ticks()
 
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    if start_time != 0:
                         end_time = pygame.time.get_ticks()
-
                         difftime = (end_time - start_time) / 1000
-                        self.succ_score += 1
+                        start_time = 0
 
+                        self.succ_score += 1
                         dist = math.hypot(event.pos[0] - WIDTH/2, event.pos[1] - HEIGHT/2)
+
                         self.data['fittslaw'].append({
-                            'time': round(difftime, 2),
+                            'start_time': round(start_time, 2),
+                            'end_time': round(end_time, 2),
+                            'time_difference': round(difftime, 2),
                             'distance': round(dist, 2),
                             'width': self.current_target.radius * 2
                         })
 
                         self.next_target()
                         print('Successful clicks:', self.succ_score, 'vs Unsuccessful clicks:', self.unsucc_score)
-
-                elif event.type == pygame.MOUSEBUTTONUP:
-                    start_time = None
 
             clock.tick(FPS)
 
