@@ -62,19 +62,41 @@ class FittsLawExperiment:
             clock.tick(FPS)
 
     def show_image_screen(self):
+        screen_info = pygame.display.Info()
+        WIDTH, HEIGHT = screen_info.current_w, screen_info.current_h
+
         screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        image = pygame.image.load("informedConsent.png") 
-        image_rect = image.get_rect(center=(WIDTH/2, HEIGHT/2))
+        original_image = pygame.image.load("informedConsentFittsLaw.png")
+        original_image_rect = original_image.get_rect()
+        
+        # Calculate the scaling factor
+        scale = min(WIDTH / original_image_rect.width, HEIGHT / original_image_rect.height)
+        
+        # Scale the image and get the rect
+        scaled_image = pygame.transform.scale(original_image, (int(original_image_rect.width * scale), int(original_image_rect.height * scale)))
+        scaled_image_rect = scaled_image.get_rect(center=(WIDTH/2, HEIGHT/2))
+        
         button = pygame.Rect(WIDTH/2 - 50, HEIGHT - 100, 400, 50)
         font = pygame.font.Font(None, 36)
-        button_text = font.render("i agree to sell you my data", True, BLACK)
+        button_text = font.render("I agree to play.", True, (0, 0, 0))
         button_text_rect = button_text.get_rect(center=button.center)
-
         clock = pygame.time.Clock()
         while True:
-            screen.fill(BLACK)
-            screen.blit(image, image_rect)
-            pygame.draw.rect(screen, NEON_PURPLE, button)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+
+       
+            screen.blit(scaled_image, scaled_image_rect)
+            pygame.draw.rect(screen, (0, 0, 0), button)
+            screen.blit(button_text, button_text_rect)
+
+            pygame.display.flip()
+
+            screen.fill((0, 0, 0))
+            screen.blit(scaled_image, scaled_image_rect)
+            pygame.draw.rect(screen, (128, 0, 128), button)
             screen.blit(button_text, button_text_rect)
             pygame.display.flip()
 
